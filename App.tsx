@@ -9,9 +9,16 @@ import { globalStyles } from './src/styles/global';
 import AboutScreen from './src/components/AboutScreen';
 
 // TODO (Zustand): Importe o seu useTaskStore aqui
+import { useAuthStore } from './src/store/useAuthStore';
+import LoginScreen from './src/components/LoginScreen';
+import SignupScreen from './src/components/SignupScreen';
 
 export default function App() {
   // TODO (Zustand): Remova este useState e utilize o seletor da sua store para pegar as tasks
+  const token = useAuthStore((state) => state.token);
+  const logout = useAuthStore((state) => state.logout);
+  const [showSignup, setShowSignup] = useState(false);
+
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [text, setText] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
@@ -29,8 +36,17 @@ export default function App() {
 
   useEffect(() => {
     // TODO (Zustand): Atualize esta chamada para usar a action correspondente da store
-    getAllTasks(setTasks, setLoading);
-  }, []);
+    if (token) {
+      getAllTasks(setTasks, setLoading);
+    }
+  }, [token]);
+
+  if (!token) {
+    if (showSignup) {
+      return <SignupScreen onNavigateToLogin={() => setShowSignup(false)} />;
+    }
+    return <LoginScreen onNavigateToSignup={() => setShowSignup(true)} />;
+  }
 
   const resetForm = () => {
     setText("");
@@ -130,6 +146,17 @@ export default function App() {
             onPress={() => setTasks([])} 
           >
             <Text style={styles.actionButtonText}>Excluir todas</Text>
+          </Pressable>
+
+          <Pressable 
+            style={({ pressed }) => [
+              styles.actionButton,
+              styles.logoutButton,
+              pressed && styles.logoutButtonPressed
+            ]}
+            onPress={logout}
+          >
+            <Text style={styles.actionButtonText}>Sair</Text>
           </Pressable>
         </View>
 
@@ -338,7 +365,7 @@ const styles = StyleSheet.create({
   actionButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 16,
+    gap: 8,
     marginTop: 16,
   },
   aboutButtonContainer: {
@@ -347,7 +374,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -360,7 +387,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 12,
     letterSpacing: 0.5,
   },
   actionButtonAdd: {
@@ -382,6 +409,15 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
     elevation: 1,
     shadowOpacity: 0.1,
+  },
+  logoutButton: {
+    backgroundColor: '#6c757d',
+    shadowColor: '#6c757d',
+  },
+  logoutButtonPressed: {
+    backgroundColor: '#5a6268',
+    transform: [{ scale: 0.98 }],
+    elevation: 1,
   },
   loaderContainer: {
     position: 'absolute',
