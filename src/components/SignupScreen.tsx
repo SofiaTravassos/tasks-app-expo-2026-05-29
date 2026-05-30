@@ -1,9 +1,25 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image, Platform } from 'react-native';
 import axios from 'axios';
 import { globalStyles } from '../styles/global';
 
-const API_URL = 'http://10.0.2.2:5000/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL
+  ? (Platform.OS === 'android'
+    ? process.env.EXPO_PUBLIC_API_URL.replace('localhost', '10.0.2.2')
+    : process.env.EXPO_PUBLIC_API_URL)
+  : (Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000');
+const API_URL = `${API_BASE_URL.replace(/\/$/, '')}/api/auth`;
+
+const getSignupErrorMessage = (error: unknown) => {
+  if (axios.isAxiosError(error)) {
+    if (error.response?.data?.message) return error.response.data.message;
+    if (error.response?.data?.error) return error.response.data.error;
+    if (error.response?.status) return `Erro ${error.response.status} ao criar conta.`;
+    if (error.message) return error.message;
+  }
+
+  return 'Erro ao criar conta. Tente novamente.';
+};
 
 interface SignupScreenProps {
   onNavigateToLogin: () => void;
@@ -14,19 +30,24 @@ export default function SignupScreen({ onNavigateToLogin }: SignupScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
   const handleSignup = async () => {
+    setMessage('');
+
     if (!name || !email || !password) {
+      setMessage('Por favor, preencha todos os campos.');
       Alert.alert('Erro', 'Por favor, preencha todos os campos.');
       return;
     }
 
     setLoading(true);
     try {
-      await axios.post(`${API_URL}/auth/register`, { name, email, password });
+      await axios.post(`${API_URL}/signup`, { email, password });
       Alert.alert('Sucesso', 'Conta criada com sucesso! Você já pode fazer login.');
       onNavigateToLogin();
     } catch (error) {
+      setMessage(getSignupErrorMessage(error));
       Alert.alert('Erro', 'Erro ao criar conta. Tente novamente.');
     } finally {
       setLoading(false);
@@ -59,6 +80,8 @@ export default function SignupScreen({ onNavigateToLogin }: SignupScreenProps) {
         onChangeText={setPassword}
         secureTextEntry
       />
+
+      {!!message && <Text style={styles.messageText}>{message}</Text>}
 
       <TouchableOpacity style={styles.button} onPress={handleSignup} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Criar Conta</Text>}
@@ -98,6 +121,13 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 16,
     fontSize: 16,
+  },
+  messageText: {
+    color: '#d9363e',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   button: {
     backgroundColor: '#000',
